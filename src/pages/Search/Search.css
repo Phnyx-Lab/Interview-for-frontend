@@ -18,11 +18,17 @@
     gap: 4vw;
 }
 
-.logo {
+.logo-link {
     position: absolute;
     top: 5%;
     left: 2%;
+    display: block;
     width: 3.5vw;
+    height: auto;
+}
+
+.logo {
+    width: 100%;
     height: auto;
 }
 

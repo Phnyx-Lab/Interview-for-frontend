@@ -13,7 +13,7 @@ const GoBackArrow: React.FC<IconProps> = (props) => {
       <path
         d="M9 17.5L1 9.5L9 1.5"
         stroke="currentColor"
-        strokeWidth="2"
+        strokeWidth="3"
         strokeLinecap="round"
         strokeLinejoin="round"
       />

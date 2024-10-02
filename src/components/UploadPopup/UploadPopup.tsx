@@ -41,26 +41,27 @@ const UploadPopup: React.FC<UploadPopupProps> = ({ onClose, onUploadConfirm, ini
   };
 
   const uploadFiles = async (files: File[], category: string) => {
-    const formData = new FormData();
-
-    files.forEach((file) => {
-      formData.append("file", file);
-    });
-
-    formData.append("document_group_name", category);
-
     try {
       setUploading(true); 
       setErrorMessage(null);
 
-      const response = await axios.post(`${API_BASE_URL}/upload`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      let responses = [];
 
-      console.log("Upload success:", response.data);
-
+      for (let i = 0; i < files.length; i+=5) {
+        const formData = new FormData();
+        const batchFile = files.slice(i, i+5);
+        formData.append("document_group_name", category);
+        batchFile.forEach((file) => {
+          formData.append("file", file);
+        });
+        const response = axios.post(`http://52.53.184.152:5001/upload`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });    
+        responses.push(response);
+      }
+      await Promise.all(responses);
       onUploadConfirm(files, category);
     } catch (error) {
       console.error("Error uploading files:", error);

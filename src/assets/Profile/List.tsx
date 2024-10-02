@@ -1,5 +1,4 @@
 import React from 'react';
-
 const ListIcon: React.FC = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 16" fill="none">
     <path 
@@ -11,5 +10,4 @@ const ListIcon: React.FC = () => (
     />
   </svg>
 );
-
 export default ListIcon;

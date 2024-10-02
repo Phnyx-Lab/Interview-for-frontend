@@ -60,7 +60,6 @@
 .icon-scroll {
     align-self: center;
     width: 100%;
-    height: 100%;
 }
 
 .scroll-button:hover {
@@ -72,13 +71,13 @@
 .scroll-button.left {
     position: relative;
     left: 0;
-    z-index: 1;
+    z-index: 0;
 }
 
 .scroll-button.right {
     position: relative;
     right: 0;
-    z-index: 1;
+    z-index: 0;
 }
 
 .document-button {

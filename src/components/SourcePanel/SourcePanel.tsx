@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef, useEffect} from "react";
 import "./SourcePanel.css";
 import { ReactComponent as Cross } from "../../assets/Cross.svg";
 
@@ -16,6 +16,8 @@ interface SourcePanelProps {
   onLookClick: () => void;
   onCloseClick: () => void; 
   onDownloadClick: () => void;
+  panelWidth: number; 
+  setPanelWidth: (width: number) => void;
 }
 
 const SourcePanel: React.FC<SourcePanelProps> = ({
@@ -23,9 +25,60 @@ const SourcePanel: React.FC<SourcePanelProps> = ({
   onLookClick,
   onCloseClick,
   onDownloadClick,
+  panelWidth,
+  setPanelWidth,
 }) => {
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const isResizing = useRef(false);
+  const startX = useRef(0);
+  const initialWidth = useRef(panelWidth);
+  const minWidth = 32;
+  const maxWidth = 55;
+
+  const handleMouseMove = (event: MouseEvent) => {
+    if (isResizing.current) {
+      const diffX = event.clientX - startX.current;
+      let newWidth = initialWidth.current - (diffX / window.innerWidth) * 100;
+
+      if (newWidth < minWidth) newWidth = minWidth;
+      if (newWidth > maxWidth) newWidth = maxWidth;
+
+      setPanelWidth(newWidth); 
+    }
+  };
+
+  const handleMouseDown = (event: React.MouseEvent) => {
+    isResizing.current = true;
+    startX.current = event.clientX;
+    initialWidth.current = panelWidth; 
+    document.body.style.cursor = "ew-resize";
+    document.body.style.userSelect = "none";
+  };
+
+  const handleMouseUp = () => {
+    if (isResizing.current) {
+      isResizing.current = false;
+      document.body.style.cursor = "default";
+      document.body.style.userSelect = "";
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, []);
+
   return (
-    <div className="source-section custom-scrollbar">
+    <div className="source-section custom-scrollbar"       
+    style={{ width: `${panelWidth}vw` }}
+    ref={panelRef}>
+      <div className="source-panel-resizer" onMouseDown={handleMouseDown} />
+
       <div className="source-section-header">
         <h3>{retrieved_chunks.original_name}</h3>
         <div className="cross-container">

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import "./SearchResult.css";
 import { ReactComponent as Logo } from "../../assets/Logo.svg";
@@ -14,7 +14,7 @@ import API_BASE_URL from "../../config";
 import SubmitButton from "../../assets/SearchResult/SubmitButton";
 import CancelButton from "../../assets/SearchResult/CancelButton";
 
-//generated_generated_response
+//generated_generatedResponse
 
 interface RetrievedChunk {
   original_name: string;
@@ -32,12 +32,18 @@ const SearchResult: React.FC = () => {
   const location = useLocation(); // Use location to get the data passed from SearchForm
   const navigate = useNavigate();
 
-  // Access the passed state containing the API results
-  const generated_response: string = location.state?.generated_response || "";
-  const retrieved_chunks: RetrievedChunk[] =
-    location.state?.retrieved_chunks || [];
-  const chatStrid = location.state?.chatStrid || ""; // Assuming this is passed from SearchForm
 
+  const {
+    locationRetrievedChunks = [],
+    locationGeneratedResponse = null,
+    locationOriginalQuery = null,
+    locationChatStrid = null
+  } = location.state || {}; // Fallbacks to empty or null in case state is undefined
+
+  // Access the passed state containing the API results
+  const [generatedResponse, setGeneratedResponse] = useState<string>(locationGeneratedResponse || "");
+  const [retrieved_chunks, setRetrievedChunks] = useState<RetrievedChunk[]>(locationRetrievedChunks || []);
+  const original_query = locationOriginalQuery.toString(); 
   const [selectedChunk, setSelectedChunk] = useState<RetrievedChunk | null>(
     null
   );
@@ -51,6 +57,57 @@ const SearchResult: React.FC = () => {
 
   const [activeThumbsUp, setActiveThumbsUp] = useState(false);
   const [activeThumbsDown, setActiveThumbsDown] = useState(false);
+
+  const intervalIdRef = useRef<number | null>(null);
+
+  const fetchChatMetadata = async () => {
+    try {
+      console.log("chatStrid:", locationChatStrid);
+      const response = await axios.post(`${API_BASE_URL}/get_chat_metadata`, {
+        chat_strid: locationChatStrid,
+      });
+    
+      const data = response.data;
+      
+      // Check if the response is non-empty
+      if (data && data.generated_answer && Object.keys(data.generated_answer).length > 0) {
+        setGeneratedResponse(data.generated_answer);
+        if (intervalIdRef.current !== null) {
+          clearInterval(intervalIdRef.current);
+        }
+      }
+      if (data && (data.status === "FAILURE" || data.status === "SUCCESS")) {
+        setGeneratedResponse("답변을 가져올 수 없습니다.");
+        if (intervalIdRef.current !== null) {
+          clearInterval(intervalIdRef.current);
+        }
+      }
+      if (generatedResponse !== "") {
+        if (intervalIdRef.current !== null) {
+          clearInterval(intervalIdRef.current);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching chat metadata:", error);
+      setGeneratedResponse("서버 오류로 인해 답변을 가져올 수 없습니다.");
+    }
+  };
+
+  useEffect(() => {
+    // Set up the interval and store the id in the ref
+    intervalIdRef.current = window.setInterval(fetchChatMetadata, 1000);
+
+    // Clean up the interval on component unmount
+    return () => {
+      if (intervalIdRef.current !== null) {
+        clearInterval(intervalIdRef.current);
+      }
+    };
+  }, [locationChatStrid]);
+
+  useEffect(() => {
+    setRetrievedChunks(locationRetrievedChunks);
+  },  [locationRetrievedChunks]);
 
   const handleCloseSourcePanel = () => {
     setSelectedChunk(null);
@@ -106,6 +163,16 @@ const SearchResult: React.FC = () => {
     id: chunk.id || index + 1, // Add id if missing, using index
   }));
 
+  const handleClearScreen = () => {
+    setGeneratedResponse("");
+    setSelectedChunk(null);
+    setSelectedButtonId(null);
+    setShowFeedbackPopup(false);
+    setActiveThumbsDown(false);
+    setActiveThumbsUp(false);
+    setRetrievedChunks([]);
+  }
+
   const handleThumbClick = async (rating: number) => {
     setShowFeedbackPopup(true); // Show feedback popup when thumbs are clicked
 
@@ -124,7 +191,7 @@ const SearchResult: React.FC = () => {
     console.log("Rating:", rating);
 
     await axios.post(`${API_BASE_URL}/rate_chat`, {
-      chat_strid: chatStrid, // Use chat_strid from SearchForm
+      chat_strid: locationChatStrid, // Use chat_strid from SearchForm
       user_rating: rating, // 5 for like, 1 for dislike
     });
 
@@ -135,7 +202,7 @@ const SearchResult: React.FC = () => {
     try {
       console.log(userFeedback);
       await axios.post(`${API_BASE_URL}/rate_chat`, {
-        chat_strid: chatStrid, // Use chat_strid from SearchForm
+        chat_strid: locationChatStrid, // Use chat_strid from SearchForm
         user_feedback: userFeedback, // Feedback entered by user
       }, {
         headers: {
@@ -157,7 +224,7 @@ const SearchResult: React.FC = () => {
     setUserFeedback(""); // Reset feedback input
   };
 
-  if(location.state?.original_query === undefined) {
+  if(locationOriginalQuery === undefined) {
     navigate("/");
   }
 
@@ -178,35 +245,67 @@ const SearchResult: React.FC = () => {
         >
           <div className="query">
             <div className="query-text">
-              {location.state?.original_query || "No Query"}
+              {original_query || "No Query"}
             </div>
-            <button
-              className={`thumbs-up-button ${activeThumbsUp ? "active" : ""}`}
-              onClick={() => handleThumbClick(5)} // Like -> 5 rating
-            >
-              <ThumbsUpIcon />
-            </button>
-            <button
-              className={`thumbs-down-button ${
-                activeThumbsDown ? "active" : ""
-              }`}
-              onClick={() => handleThumbClick(1)} // Dislike -> 1 rating
-            >
-              <ThumbsDownIcon />
-            </button>
           </div>
 
-          <ScrollableSection
-            generated_response={generated_response}
-            retrieved_chunks={processedChunks}
-            onDocumentSelect={handleDocumentSelect}
-            isLookPanelOpen={isLookPanelVisible}
-            selectedButtonId={selectedButtonId}
-            setSelectedButtonId={setSelectedButtonId}
-          />
+          <div className="main-results-container">
+            <div className="thumbs-container">
+              <button
+                className={`thumbs-up-button ${activeThumbsUp ? "active" : ""}`}
+                onClick={() => handleThumbClick(5)} // Like -> 5 rating
+              >
+                <ThumbsUpIcon />
+              </button>
+              <button
+                className={`thumbs-down-button ${
+                  activeThumbsDown ? "active" : ""
+                }`}
+                onClick={() => handleThumbClick(1)} // Dislike -> 1 rating
+              >
+                <ThumbsDownIcon />
+              </button>
+              {/* Feedback Popup */}
+              {showFeedbackPopup && (
+                <div className="feedback-popup">
+                  <textarea
+                    value={userFeedback}
+                    onChange={(e) => setUserFeedback(e.target.value)}
+                    placeholder="답변에 만족하셨나요?"
+                  />
+                  <div className="feedback-popup-buttons">
+                    <button
+                      className="submit-cancel-buttons"
+                      onClick={handleFeedbackSubmit}
+                    >
+                      <SubmitButton />
+                    </button>
+                    <button
+                      className="submit-cancel-buttons"
+                      onClick={() => {setShowFeedbackPopup(false);
+                        setActiveThumbsDown(false);
+                        setActiveThumbsUp(false);
+                      }}
+                    >
+                      <CancelButton />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
+            <ScrollableSection
+              generated_response={generatedResponse}
+              retrieved_chunks={processedChunks}
+              onDocumentSelect={handleDocumentSelect}
+              isLookPanelOpen={isLookPanelVisible}
+              selectedButtonId={selectedButtonId}
+              setSelectedButtonId={setSelectedButtonId}
+            />
+          </div>
+          
           <div className="search-bar-container">
-            <SearchForm />
+            <SearchForm clear_screen={handleClearScreen} />
           </div>
         </div>
 
@@ -218,6 +317,8 @@ const SearchResult: React.FC = () => {
               onLookClick={handleLookClick}
               onCloseClick={handleCloseSourcePanel}
               onDownloadClick={handleDownloadClick}
+              panelWidth={lookPanelWidth}
+              setPanelWidth={setLookPanelWidth}              
             />
           )}
 
@@ -231,31 +332,7 @@ const SearchResult: React.FC = () => {
             />
           )}
 
-          {/* Feedback Popup */}
-          {showFeedbackPopup && (
-            <div className="feedback-popup">
-              <textarea
-                value={userFeedback}
-                onChange={(e) => setUserFeedback(e.target.value)}
-                placeholder="댓글을 남겨주세요."
-              />
-              <button
-                className="submit-cancel-buttons"
-                onClick={handleFeedbackSubmit}
-              >
-                <SubmitButton />
-              </button>
-              <button
-                className="submit-cancel-buttons"
-                onClick={() => {setShowFeedbackPopup(false);
-                   setActiveThumbsDown(false);
-                    setActiveThumbsUp(false);
-                  }}
-              >
-                <CancelButton />
-              </button>
-            </div>
-          )}
+          
         </div>
       </div>
     </div>

@@ -1,10 +1,11 @@
 import React from "react";
 import "./ScrollableSection.css";
-import { ReactComponent as SourceIcon } from "../../assets/SearchResult/SourceIcon.svg";
+// import { ReactComponent as SourceIcon } from "../../assets/SearchResult/SourceIcon.svg";
 import { ReactComponent as AnswerIcon } from "../../assets/SearchResult/AnswerIcon.svg";
 import { ReactComponent as DocumentIcon } from "../../assets/SearchResult/DocumentsIcon.svg";
 import SourceButtonGroup from "../SourceButtonGroup/SourceButtonGroup";
 import ReactMarkdown from "react-markdown";
+import Spinner from "../Spinner/Spinner";
 
 interface RetrievedChunk {
   original_name: string;
@@ -41,25 +42,6 @@ const ScrollableSection: React.FC<ScrollableSectionProps> = ({
 
   return (
     <div className="scrollable-section custom-scrollbar">
-      {/* Box 1: Buttons with document names */}
-      <div className="box-container">
-        <h3>
-          <i className="icon-class">
-            <SourceIcon />
-          </i>{" "}
-          관련 자료
-        </h3>
-        <div className="document-button-container">
-          <SourceButtonGroup
-            retrieved_chunks={retrieved_chunks}
-            onButtonClick={onDocumentSelect}
-            onDeselect={handleDeselect} 
-            selectedButtonId={selectedButtonId} 
-            setSelectedButtonId={setSelectedButtonId} 
-          />
-        </div>
-      </div>
-
       {/* Box 2: generated_response string */}
       <div className="box-container">
         <h3>
@@ -67,26 +49,59 @@ const ScrollableSection: React.FC<ScrollableSectionProps> = ({
             <AnswerIcon />
           </i>
           답변
-        </h3>
-        <p><ReactMarkdown>{generated_response}</ReactMarkdown></p>
+        </h3>{
+          generated_response ? (
+            <ReactMarkdown className="generated-response" children={generated_response} />
+          ) : (
+            <div className="spinner-container">
+              <Spinner />
+            </div>
+          )
+        }
       </div>
 
       {/* Box 3: Document titles and texts */}
-      <div className="box-container">
+      <div className="box-container"> 
         <h3>
           <i className="icon-class">
             <DocumentIcon />
           </i>
           참고 자료
         </h3>
-        <div className="document-details-container">
-          {retrieved_chunks.map((document) => (
-            <div key={document.id} className="document-details">
-              <strong>{`${document.id}. ${document.original_name} (페이지 ${document.page_num})`}</strong>
-              <p>{document.chunk_text}</p>
+        {/* Box 1: Buttons with document names */}
+        {retrieved_chunks && retrieved_chunks.length > 0 ? (
+          <>
+          <div className="box-container">
+            {/* <h3>
+              <i className="icon-class">
+                <SourceIcon />
+              </i>{" "}
+              관련 자료
+            </h3> */}
+            <div className="document-button-container">
+              <SourceButtonGroup
+                retrieved_chunks={retrieved_chunks}
+                onButtonClick={onDocumentSelect}
+                onDeselect={handleDeselect} 
+                selectedButtonId={selectedButtonId} 
+                setSelectedButtonId={setSelectedButtonId} 
+              />
             </div>
-          ))}
-        </div>
+          </div>
+          <div className="document-details-container">
+            {retrieved_chunks.map((document) => (
+              <div key={document.id} className="document-details">
+                <strong>{`${document.id}. ${document.original_name} (페이지 ${document.page_num})`}</strong>
+                <p>{document.chunk_text}</p>
+              </div>
+            ))}
+          </div>          
+          </>
+        ) : (
+          <div className="spinner-container">
+            <Spinner />
+          </div>
+        )}
       </div>
     </div>
   );

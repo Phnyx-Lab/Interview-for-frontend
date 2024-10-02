@@ -5,11 +5,14 @@ import SubmitButton from "../SubmitButton/SubmitButton";
 import "./SearchForm.css";
 import API_BASE_URL from "../../config.ts"; // Import the API base URL
 import Spinner from "../Spinner/Spinner";
-// import { fetchAuthSession } from "aws-amplify/auth";
+import { fetchAuthSession } from "aws-amplify/auth";
 import { EventSourcePolyfill } from 'event-source-polyfill';
 
+interface SearchFormProps {
+  clear_screen: () => void;
+}
 
-const SearchForm: React.FC = () => {
+const SearchForm: React.FC<SearchFormProps> = ({ clear_screen }) => {
   const [query, setQuery] = useState<string>("");
   // const [language, setLanguage] = useState<string>("KOREAN");
   // const [collectionType, setCollectionType] = useState<string>("LAYOUT_AWARE");
@@ -41,15 +44,15 @@ const SearchForm: React.FC = () => {
   // }, []);
 
   useEffect(() => {
-    if (retrievedChunks.length > 0 || generatedResponse) {
+    if ((retrievedChunks.length > 0 || generatedResponse) && loading) {
       setLoading(false);
       // only navigate if there is either retrievedChunks or generatedResponse
       navigate("/result", {
         state: {
-          retrieved_chunks: retrievedChunks,
-          generated_response: generatedResponse,
-          original_query: query,
-          chatStrid,
+          locationRetrievedChunks: retrievedChunks.map((chunk) => chunk.valueOf()),
+          locationGeneratedResponse: generatedResponse?.valueOf(),
+          locationOriginalQuery: query.valueOf(),
+          locationChatStrid: chatStrid?.valueOf(),
         },
       });
     }
@@ -57,8 +60,21 @@ const SearchForm: React.FC = () => {
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (!query) {
+      setError("Please enter a query.");
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
+
+    // Clear the screen
+    setRetrievedChunks([]);
+    setGeneratedResponse(null);
+    clear_screen();
+
 
     try {
       const response = await axios.post(`${API_BASE_URL}/search`, {
@@ -74,16 +90,17 @@ const SearchForm: React.FC = () => {
 
       // Use setChatStrid here
       setChatStrid(chatStrid);
-      // const session = await fetchAuthSession();
+      console.log("Chat Strid:", chatStrid);
+      const session = await fetchAuthSession();
 
-      // const idToken = session?.tokens?.idToken?.toString() || "";
+      const idToken = session?.tokens?.idToken?.toString() || "";
       const eventSource = new EventSourcePolyfill(
         `${API_BASE_URL}/search?chat_strid=${chatStrid}`,
-        // {
-          // headers: {
-            // 'Authorization': `Bearer ${idToken}`
-          // }
-        // }
+        {
+          headers: {
+            'Authorization': `Bearer ${idToken}`
+          }
+        }
       );
 
       let dataReceived = 0;
@@ -109,7 +126,7 @@ const SearchForm: React.FC = () => {
         }
 
         // Once both retrievedChunks and generatedResponse are available, navigate to the result page
-        if (dataReceived === 4) {
+        if (dataReceived === 3) {
           eventSource.close();
         }
       };

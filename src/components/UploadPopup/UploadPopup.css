@@ -14,13 +14,15 @@
 
 .popup-container {
     background-color: white;
-    width: 30vw;
+    width: 35vw;
+    height: 80vh;
     padding: 2vw;
     border-radius: 1vw;
     display: flex;
     flex-direction: column;
     gap: 1.5vw;
     box-shadow: 0 0.5vw 1vw rgba(0, 0, 0, 0.1);
+    overflow-y: scroll;
 }
 
 .popup-container h2 {
@@ -40,7 +42,6 @@
     justify-content: center;
     align-items: center;
     gap: 2vw;
-    margin-top: 10vw;
 }
 
 .upload-button-container {
@@ -112,6 +113,14 @@ select {
     padding: 0;
 }
 
+.selected-files {
+    display: flex;
+    flex-direction: column;
+    gap: 1vw;
+    overflow-y: scroll;
+    height: 20vh;
+}
+
 .cancel-button,
 .confirm-button {
     font-size: 1.2vw;
@@ -130,12 +139,8 @@ select {
 }
 
 .confirm-button {
-    border: 0.2vw solid var(--color-secondary-medium-gray);
-    color: var(--color-secondary-medium-gray);
-}
-
-.confirm-button:hover {
-    background-color: var(--color-primary-blue);
+    border: 0.2vw solid var(--color-primary-dark-blue);
+    color: var(--color-primary-dark-blue);
 }
 
 .popup-overlay.dragging {

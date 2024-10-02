@@ -100,7 +100,7 @@ const Profile: React.FC = () => {
         <div className="return-home-button">
           <button onClick={navigateHome}>
             <GoBackArrow />
-            PhnyX RAG 검색
+            돌아가기
           </button>
         </div>
       </div>

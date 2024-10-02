@@ -60,9 +60,16 @@ const SourceButtonGroup: React.FC<SourceButtonGroupProps> = ({
         pages: [],
       };
     }
-    acc[doc.doc_id].pages.push(doc.page_num);
+    // Use a Set to collect unique page numbers
+    acc[doc.doc_id].pages = Array.from(new Set([...acc[doc.doc_id].pages, doc.page_num]));
+  
     return acc;
   }, {} as Record<string, { document: RetrievedChunk; pages: number[] }>);
+  
+  // Sort the pages for each document
+  for (const key in groupedDocuments) {
+    groupedDocuments[key].pages.sort((a, b) => a - b);
+  }
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -79,6 +86,7 @@ const SourceButtonGroup: React.FC<SourceButtonGroupProps> = ({
   };
 
   const uniqueDocuments = Object.values(groupedDocuments);
+  uniqueDocuments.sort((a, b) => a.document.id - b.document.id);
 
   const handleButtonClick = (selectedDoc: RetrievedChunk) => {
     if (selectedButtonId === selectedDoc.id) {
